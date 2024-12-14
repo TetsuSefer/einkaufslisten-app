@@ -12,16 +12,17 @@ class EinkaufslistenPage extends StatefulWidget {
 class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _controller = TextEditingController();
-  String _searchQuery = "";
+  final FocusNode _focusNode = FocusNode();
 
-  final FocusNode _focusNode = FocusNode(); // Fokus-Node für das Textfeld
+  String _searchQuery = "";
+  bool _isEditMode = false;
 
   Future<void> _addItem() async {
     String name = _controller.text.trim();
     if (name.isNotEmpty) {
       await _firestoreService.addEinkaufItem(EinkaufItem(id: '', name: name));
       _controller.clear();
-      _focusNode.requestFocus(); // Fokus bleibt auf dem Textfeld
+      _focusNode.requestFocus();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Bitte einen Namen eingeben')),
@@ -66,52 +67,55 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
 
   Widget _buildListItem(EinkaufItem item) {
     return Card(
-      elevation: 3,
-      color: Colors.white, // Card ist rein weiß
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      elevation: 2,
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
+        dense: true, // Kompakt
         title: Text(
           item.name,
           style: TextStyle(
             decoration: item.erledigt ? TextDecoration.lineThrough : null,
             color: item.erledigt ? Colors.grey : Colors.black,
-            fontSize: 18,
+            fontSize: 16, // Kleinere Schrift
           ),
         ),
         leading: CircleAvatar(
+          radius: 20, // Kleinerer Kreis
           backgroundColor: item.erledigt ? Colors.white : const Color.fromARGB(255, 149, 11, 11),
           child: Icon(
             item.erledigt ? Icons.check : Icons.shopping_cart,
             color: item.erledigt ? const Color.fromARGB(255, 149, 11, 11) : Colors.white,
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.grey),
-              onPressed: () => _editItem(item),
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () {
-                _firestoreService.deleteEinkaufItem(item.id);
-              },
-            ),
-            Checkbox(
-              value: item.erledigt,
-              onChanged: (bool? value) {
-                setState(() {
-                  item.erledigt = value ?? false;
-                  _firestoreService.updateEinkaufItem(item);
-                });
-              },
-            ),
-          ],
-        ),
+        trailing: _isEditMode
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
+                    onPressed: () => _editItem(item),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, size: 20, color: Colors.red),
+                    onPressed: () {
+                      _firestoreService.deleteEinkaufItem(item.id);
+                    },
+                  ),
+                ],
+              )
+            : Checkbox(
+                value: item.erledigt,
+                onChanged: (bool? value) {
+                  setState(() {
+                    item.erledigt = value ?? false;
+                    _firestoreService.updateEinkaufItem(item);
+                  });
+                },
+              ),
       ),
     );
   }
@@ -120,7 +124,6 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideScreen = screenWidth > 1000;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -132,6 +135,19 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
         centerTitle: true,
         backgroundColor: const Color.fromARGB(255, 149, 11, 11),
         elevation: 4,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isEditMode ? Icons.check : Icons.edit,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _isEditMode = !_isEditMode; // Bearbeitungsmodus umschalten
+              });
+            },
+          ),
+        ],
       ),
       backgroundColor: Colors.white,
       body: Center(
@@ -147,7 +163,7 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.all(12.0),
                   child: TextField(
                     onChanged: (query) {
                       setState(() {
@@ -177,18 +193,16 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
                       }
                       final items = snapshot.data ?? [];
 
-                      // Sortierung: Alphabetisch nach dem Namen
                       items.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
 
                       final filteredItems = items.where((item) {
                         return item.name.toLowerCase().contains(_searchQuery.toLowerCase());
                       }).toList();
-
                       if (filteredItems.isEmpty) {
                         return const Center(
                           child: Text(
                             'Keine Items gefunden!',
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
                         );
                       }
@@ -202,12 +216,12 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: const BoxDecoration(
                     color: Color.fromARGB(255, 149, 11, 11),
                     borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
                   ),
                   child: Row(
@@ -215,7 +229,7 @@ class _EinkaufslistenPageState extends State<EinkaufslistenPage> {
                       Expanded(
                         child: TextField(
                           controller: _controller,
-                          focusNode: _focusNode, // Fokus auf Textfeld
+                          focusNode: _focusNode,
                           onSubmitted: (_) => _addItem(),
                           decoration: const InputDecoration(
                             hintText: 'Neues Item hinzufügen',
