@@ -22,6 +22,7 @@ class EinkaufslistenApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: const EinkaufslistenPage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
